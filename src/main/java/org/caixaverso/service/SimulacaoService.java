@@ -1,7 +1,6 @@
 package org.caixaverso.service;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
 import org.caixaverso.dto.ParcelaDetalhe;
 import org.caixaverso.dto.SimulacaoResponse;
 import org.caixaverso.model.ProdutoEmprestimo;
@@ -12,9 +11,6 @@ import java.util.List;
 
 @ApplicationScoped
 public class SimulacaoService {
-
-    @Inject
-    Formatador formatador;
 
     public SimulacaoResponse simular(ProdutoEmprestimo produto, double valor, int prazo) {
 
@@ -39,14 +35,13 @@ public class SimulacaoService {
         }
 
         SimulacaoResponse response = new SimulacaoResponse();
-        response.nomeProduto = produto.nome;
         response.taxaJurosAnual = Formatador.formatarPercentual(produto.taxaJurosAnual / 100);
-        response.taxaJurosMensal = Formatador.formatarPercentual(taxaMensalEfetiva);
+        response.taxaJurosEfetivaMensal = Formatador.formatarPercentual(taxaMensalEfetiva);
         response.valorSolicitado = Formatador.formatarReais(valor);
         response.valorTotalComJuros = Formatador.formatarReais(parcelaFixa * prazo);
         response.valorParcelaMensal = Formatador.formatarReais(parcelaFixa);
         response.prazoMeses = prazo;
-        response.parcelas = detalhes;
+        response.memoriaCalculo = detalhes;
 
         return response;
     }

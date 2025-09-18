@@ -1,93 +1,105 @@
 package org.caixaverso.controller;
 
-import org.caixaverso.dto.SimulacaoRequest;
-import org.caixaverso.dto.SimulacaoResponse;
-import org.caixaverso.model.ProdutoEmprestimo;
-import org.caixaverso.service.SimulacaoService;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
+import org.caixaverso.exception.EntidadeJaExisteException;
+import org.caixaverso.model.ProdutoEmprestimo;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
 public class ProdutoControllerTest {
 
     private ProdutoController controller;
     private EntityManager entityManager;
-    private SimulacaoService simulacaoService;
 
     @BeforeEach
     public void setup() {
-        entityManager = mock(EntityManager.class);
-        simulacaoService = mock(SimulacaoService.class);
 
+        entityManager = mock(EntityManager.class);
         controller = new ProdutoController();
         controller.entityManager = entityManager;
-        controller.simulacaoService = simulacaoService;
     }
 
     @Test
-    public void testCreateProduto() {
-        ProdutoEmprestimo produto = new ProdutoEmprestimo();
-        produto.nome = "Crédito Pessoal";
-        produto.taxaJurosAnual = 18.0;
-        produto.prazoMaximoMeses = 60;
-
-        ProdutoEmprestimo result = controller.create(produto);
-
-        verify(entityManager).persist(produto);
-        assertEquals("Crédito Pessoal", result.nome);
-    }
-
-    @Test
-    public void testSimularEmprestimo() {
-        ProdutoEmprestimo produto = new ProdutoEmprestimo();
-        produto.id = 1L;
-        produto.nome = "Consignado";
-        produto.taxaJurosAnual = 18.0;
-
-        SimulacaoRequest request = new SimulacaoRequest();
-        request.idProduto = 1L;
-        request.valorSolicitado = 10000.0;
-        request.prazoMeses = 24;
-
-        SimulacaoResponse responseMock = new SimulacaoResponse();
-        responseMock.nomeProduto = "Consignado";
-
-        when(entityManager.find(ProdutoEmprestimo.class, 1L)).thenReturn(produto);
-        when(simulacaoService.simular(produto, 10000.0, 24)).thenReturn(responseMock);
-
-        SimulacaoResponse response = controller.simular(request);
-
-        assertEquals("Consignado", response.nomeProduto);
-        verify(simulacaoService).simular(produto, 10000.0, 24);
-    }
-
-    @Test
-    public void testListProdutos() {
+    public void testListarProdutos() {
         ProdutoEmprestimo p1 = new ProdutoEmprestimo();
         p1.nome = "Produto A";
         ProdutoEmprestimo p2 = new ProdutoEmprestimo();
         p2.nome = "Produto B";
 
+        @SuppressWarnings("unchecked")
         TypedQuery<ProdutoEmprestimo> query = mock(TypedQuery.class);
+
         when(entityManager.createQuery("from ProdutoEmprestimo", ProdutoEmprestimo.class)).thenReturn(query);
         when(query.getResultList()).thenReturn(Arrays.asList(p1, p2));
 
-        List<ProdutoEmprestimo> result = controller.list();
+        List<ProdutoEmprestimo> result = controller.listar();
 
         assertEquals(2, result.size());
         assertEquals("Produto A", result.get(0).nome);
     }
 
     @Test
-    public void testUpdateProduto() {
+    public void testListarPorId() {
+        ProdutoEmprestimo produto = new ProdutoEmprestimo();
+        produto.id = 42L;
+        produto.nome = "Produto Teste";
+        when(entityManager.find(ProdutoEmprestimo.class, 42L)).thenReturn(produto);
+
+        ProdutoEmprestimo result = controller.listarPorId(42L);
+
+        assertEquals(42L, result.id);
+        assertEquals("Produto Teste", result.nome);
+    }
+
+    @Test
+    void testCadastrarProdutoNovo() {
+        ProdutoEmprestimo produto = new ProdutoEmprestimo();
+        produto.id = null; // Produto novo, sem ID
+
+        ProdutoEmprestimo result = controller.cadastrar(produto);
+
+        verify(entityManager).persist(produto);
+        assertSame(produto, result);
+    }
+
+    @Test
+    void testCadastrarProdutoComIdNaoExistente() {
+        ProdutoEmprestimo produto = new ProdutoEmprestimo();
+        produto.id = 10L;
+
+        when(entityManager.find(ProdutoEmprestimo.class, 10L)).thenReturn(null);
+
+        ProdutoEmprestimo result = controller.cadastrar(produto);
+
+        verify(entityManager).persist(produto);
+        assertSame(produto, result);
+    }
+
+    @Test
+    void testCadastrarProdutoComIdExistente() {
+        ProdutoEmprestimo produto = new ProdutoEmprestimo();
+        produto.id = 20L;
+
+        when(entityManager.find(ProdutoEmprestimo.class, 20L)).thenReturn(new ProdutoEmprestimo());
+
+        EntidadeJaExisteException ex = assertThrows(
+                EntidadeJaExisteException.class,
+                () -> controller.cadastrar(produto)
+        );
+        assertTrue(ex.getMessage().contains("Produto com ID 20 já existe."));
+        verify(entityManager, never()).persist(any());
+    }
+
+    @Test
+    public void testAtualizarProduto() {
         ProdutoEmprestimo existente = new ProdutoEmprestimo();
         existente.id = 1L;
         existente.nome = "Antigo";
@@ -101,7 +113,7 @@ public class ProdutoControllerTest {
 
         when(entityManager.find(ProdutoEmprestimo.class, 1L)).thenReturn(existente);
 
-        ProdutoEmprestimo result = controller.update(1L, atualizado);
+        ProdutoEmprestimo result = controller.atualizar(1L, atualizado);
 
         assertEquals("Novo", result.nome);
         assertEquals(18.0, result.taxaJurosAnual);
@@ -109,13 +121,13 @@ public class ProdutoControllerTest {
     }
 
     @Test
-    public void testDeleteProduto() {
+    public void testDeletarProduto() {
         ProdutoEmprestimo produto = new ProdutoEmprestimo();
         produto.id = 1L;
 
         when(entityManager.find(ProdutoEmprestimo.class, 1L)).thenReturn(produto);
 
-        controller.delete(1L);
+        controller.deletar(1L);
 
         verify(entityManager).remove(produto);
     }

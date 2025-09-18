@@ -3,14 +3,14 @@ package org.caixaverso.dto;
 import java.util.List;
 
 public class SimulacaoResponse {
-    public String nomeProduto;
-    public String taxaJurosAnual;
-    public String taxaJurosMensal;
     public String valorSolicitado;
+    public int prazoMeses;
+    public String taxaJurosAnual;
+    public String taxaJurosEfetivaMensal;
     public String valorTotalComJuros;
     public String valorParcelaMensal;
-    public int prazoMeses;
-    public List<ParcelaDetalhe> parcelas;
+
+    public List<ParcelaDetalhe> memoriaCalculo;
 }
 
 

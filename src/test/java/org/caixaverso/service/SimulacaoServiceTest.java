@@ -22,14 +22,13 @@ public class SimulacaoServiceTest {
 
         SimulacaoResponse response = service.simular(produto, valor, prazo);
 
-        assertEquals("Empréstimo Padrão", response.nomeProduto);
         assertEquals("12,00%", response.taxaJurosAnual);
-        assertEquals("0,95%", response.taxaJurosMensal);
+        assertEquals("0,95%", response.taxaJurosEfetivaMensal);
         assertEquals("R$ 10.000,00", normalizarEspacos(response.valorSolicitado));
         assertEquals("R$ 10.627,45", normalizarEspacos(response.valorTotalComJuros));
         assertEquals("R$ 885,62", normalizarEspacos(response.valorParcelaMensal));
         assertEquals(12, response.prazoMeses);
-        assertEquals(12, response.parcelas.size());
+        assertEquals(12, response.memoriaCalculo.size());
     }
 
     @Test
